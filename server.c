@@ -2,14 +2,18 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#define PORT 8005
+#include<stdlib.h>
+#include<string.h>
+#define MAX 200
+#define PORT 8000
 char messages[500]; // to store the messages sent by the server
 
+void message(int socketfd);
 int main(int argc, char **argv)
 {
     int socketfd;              // the socket file descriptor
     int connfd;                // the connection file descriptor
-    struct sockaddr_in server; //Structure describing an Internet socket address. Found in netinet/in.h
+    struct sockaddr_in server,cli; //Structure describing an Internet socket address. Found in netinet/in.h
 
     // Creating a socket
     /* socket() creates an endpoint for communication and returns a file descriptor that refers to that endpoint.  The file descriptor
@@ -18,11 +22,12 @@ int main(int argc, char **argv)
     socketfd = socket(AF_INET, SOCK_STREAM, 0); // SOCK_STREAM is used for TCP connections
     if (socketfd == -1)
     {
-        puts("Error! Failed to create a socket");
+        puts("Error! Failed to create a socket\n");
+        exit(0);
     }
     else
     {
-        puts("Successfully created a socket");
+        puts("Successfully created a socket\n");
     }
 
     // void bzero(void *s, size_t n);
@@ -41,21 +46,53 @@ int main(int argc, char **argv)
 
 
     // Binding the socket to IP and PORT
-    int bindStatus = bind(socketfd,(struct sockaddr *)(&server),sizeof(socket));
+    int bindStatus = bind(socketfd,(struct sockaddr *)(&server),sizeof(server));
     if(bindStatus==0){
-        puts("Socket binding successful");
+        puts("Socket binding successful\n");
     }
     else{
-        puts("Socket binding failed");
+        puts("Socket binding failed\n");
+        exit(0);
     }
 
     // Listening
     int listenStatus = listen(socketfd,10);
     if(listenStatus==0){
-        printf("Server listening on port %d",PORT);
+        printf("Server listening on port %d\n",PORT);
     }
     else{
-        puts("Oops, there was some error");
+        puts("Oops, there was some error\n");
+        exit(0);
     }
+
+    // Accept
+    int len = sizeof(cli);
+    connfd = accept(socketfd,(struct sockaddr*)(&cli),&len);
+    if(connfd<0){
+        puts("Accept failed\n");
+    }
+    else{
+        puts("Received message\n");
+    }
+    message(connfd);
+    close(socketfd);
     return 0;
+}
+
+void message(int socketfd){
+    char buf[MAX];
+    int n;
+    while(1){
+        n = 0;
+        bzero(buf,MAX);
+        read(socketfd,buf,sizeof(buf));
+        printf("Client: %s",buf);
+        bzero(buf,MAX);
+        while((buf[n++]=getchar())!='\n');
+        write(socketfd,buf,sizeof(buf));
+        if(strncmp(buf,"exit",4)==0){
+            puts("Server left the chat\n");
+            break;
+        }
+    }
 }
